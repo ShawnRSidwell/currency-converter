@@ -5,21 +5,30 @@ export default function App() {
   const [amount, setAmount] = useState(0);
   const [fromCurrency, setFromCurrency] = useState("USD");
   const [toCurrency, setToCurrency] = useState("USD");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [output, setOutput] = useState(0);
+  const [converted, setConverted] = useState(0);
 
   useEffect(
     function () {
-      async function fetchConverter() {
-        if (toCurrency === fromCurrency) return;
-        const res = await fetch(
-          `https://api.frankfurter.app/latest?amount=${amount}&from=${fromCurrency}&to=${toCurrency}`
-        );
-        const data = await res.json();
-        setOutput(data.rates[toCurrency]);
+      async function convert() {
+        try {
+          setIsLoading(true);
+          const res = await fetch(
+            `https://api.frankfurter.app/latest?amount=${amount}&from=${fromCurrency}&to=${toCurrency}`
+          );
+          if (!res.ok) throw new Error("Unable to fetch converter.");
+          const data = await res.json();
+          if (data.error) throw new Error("Unable to parse data");
+          setConverted(data.rates[toCurrency]);
+        } catch (error) {
+          alert(error.message);
+        } finally {
+          setIsLoading(false);
+        }
       }
-
-      fetchConverter(amount);
+      if (toCurrency === fromCurrency) return setConverted(amount);
+      convert(amount);
     },
     [amount, fromCurrency, toCurrency]
   );
@@ -27,22 +36,32 @@ export default function App() {
   return (
     <div>
       <input
-        onChange={(e) => setAmount(Number(e.target.value).toFixed(2))}
+        value={amount}
+        onChange={(e) => setAmount(Number(e.target.value))}
         type="text"
+        disabled={isLoading}
       />
-      <select onChange={(e) => setFromCurrency(e.target.value)}>
+      <select
+        value={fromCurrency}
+        onChange={(e) => setFromCurrency(e.target.value)}
+        disabled={isLoading}
+      >
         <option value="USD">USD</option>
         <option value="EUR">EUR</option>
         <option value="CAD">CAD</option>
         <option value="INR">INR</option>
       </select>
-      <select onChange={(e) => setToCurrency(e.target.value)}>
+      <select
+        value={toCurrency}
+        onChange={(e) => setToCurrency(e.target.value)}
+        disabled={isLoading}
+      >
         <option value="USD">USD</option>
         <option value="EUR">EUR</option>
         <option value="CAD">CAD</option>
         <option value="INR">INR</option>
       </select>
-      <p>{output}</p>
+      <p>{isLoading ? "Calculating....." : `${converted} ${toCurrency}`}</p>
     </div>
   );
 }
